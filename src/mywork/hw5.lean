@@ -138,6 +138,13 @@ A good English translation of the use of the
 ring tactic is "by basic algebra."
 -/
 
+example : ∀ (n : ℕ), multiple_of n 6 → multiple_of n 3 :=
+begin
+  assume num h,
+  unfold multiple_of,
+  unfold multiple_of at h,
+  
+end
 
 /-
 Here's an example. Is ℕ addition associative? 
@@ -147,8 +154,8 @@ in the English language proof below.
 
 example (n m k : ℕ) : n + (m + k) = (n + k) + m := 
 begin 
-ring 
-end  
+ring
+end 
 -- Enlish proof (it's short!): 
 
 /-
