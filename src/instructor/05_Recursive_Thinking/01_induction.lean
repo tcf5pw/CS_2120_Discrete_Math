@@ -23,8 +23,11 @@ values of *any* inductively defined data type.
 
 #2: If a type is named T, then T.rec_on is the 
 name of the corresponding induction axiom *in 
-Lean*. The idea of induction axioms is general,
-but this is its implementation in Lean.
+Lean*. The statement of the inducation axiom,
+however, even in Lean, is purely mathematical
+and is independent of Lean. It's part of the
+logic we're learning. The idea of an induction
+axiom is general.
 
 #3. An induction axiom is an axiom for proving 
 *universal generalizations* (∀ propositions) 
@@ -32,39 +35,59 @@ that assert that something is true for *all*
 values of a given type.
 -/
 
+/- ************************************
+INDUCTION OVER ALL VALUES OF TYPE bool
+************************************ -/
+
 /-
 As an example, let's look again at the definition
 of the bool type, and then at its induction axiom.
 -/
 
-#check bool
+
 /- 
+Here's the definition of the bool type
+
 inductive bool    -- data type definition
 | ff : bool       -- first constructor
 | tt : bool       -- second constructor
 -/
 
+/- Here's the induction axiom for bool.
+Be sure you understand it! Note that the
+use of "motive" for the name of a property
+might be a little confusing. Just think of
+it as "P" if that helps. 
+-/
 #check @bool.rec_on
 /-
 bool.rec_on : 
   Π {motive : bool → Sort u_1} 
   (n : bool), 
-  motive ff → motive tt → motive n
+  motive ff → 
+  motive tt → 
+  motive n
 
 Let's decode that:
 (0) bool.rec_on is an axiom that says that:
-(1) for any property or function taking a bool
-(2) and for any arbitrary Boolean value n
+(1) for any *property or function* taking ...
+(2) any arbitrary Boolean value, n,
 (3) if you prove that ff has the property
 (4) and you prove that tt has the property
-(5) then you've proved that any bool n has it.
+(5) then you've given either a proof for each
+    possible n or a return value for each n,
+    and so have either proved a generalization
+    or have defined a total function
 -/
 
 /-
-Key idea #4: For simple types like bool whose
-values are just "enumerated," proof by induction
-amounts to proof by case analysis. As a reminder
-of that strategy, here's a proof that for any
+Key idea #4: For simple types like bool, whose
+values are "enumerated," proof by induction is
+just proof by case analysis. That's what the 
+rule for bool says: prove it for ff, then for 
+tt,, and now you've got a proof *for all* bools. 
+
+As a reminder, here's a proof that for any
 bool, n, the negation of the negation of n is n.
 The idea is just to show it's true for each of
 the values individually. 
@@ -166,6 +189,15 @@ the proposition that for any day, today,
 the day after yesterday is again today.
 -/
 
+
+#check @nat.rec_on
+/-
+Π {motive : ℕ → Sort u_1} 
+  (n : ℕ), 
+  motive 0 → 
+  (Π (n : ℕ), motive n → motive n.succ) → 
+  motive n
+-/
 
 /-
 We now turn to the more interesting case of
@@ -276,6 +308,19 @@ def my_exp : ℕ → ℕ → ℕ
 example : my_exp 2 0 = 1 := rfl
 example : my_exp 2 1 = 2 := rfl
 example : my_exp 2 4 = 16 := rfl
+
+
+/-
+-/
+
+#check @nat.rec_on
+/-
+  Π {motive : ℕ → Sort u_1} 
+  (n : ℕ), 
+  motive 0 → 
+  (Π (n : ℕ), motive n → motive n.succ) → 
+  motive n
+-/
 
 /-
 So now we'll see how we can "build"
@@ -441,6 +486,13 @@ to prove holds for all natural numbers.
 
 def sum_property (n : ℕ) := 2 * sum_to n =  n * (succ n)
 
+
+/-
+The proposition
+-/
+
+def the_proposition := ∀ n, sum_property n
+
 /-
 Prove that the property holds for 0
 -/
@@ -451,13 +503,14 @@ lemma sum_zero : sum_property 0 := eq.refl 0
 Prove that if it holds for n' then it holds for n'+1
 -/
 
-lemma sum_n' : 
-  ∀ n', sum_property n' → sum_property (succ n') :=
+lemma sum_n' (n' : ℕ) (ind_hyp : sum_property n'): 
+  sum_property (succ n') :=
 begin
   unfold sum_property,
-  assume n' ind_hyp,
+  -- 2 * sum_to n'.succ = n'.succ * n'.succ.succ
   unfold sum_to,
   ring,
+  unfold sum_property at ind_hyp,
   rw ind_hyp,
   ring,
 end
@@ -466,7 +519,7 @@ end
 /-
 Put the "small machines" together using induction axiom
 -/
-example : ∀ (n : ℕ), sum_property n :=
+example : the_proposition :=
   λ n, 
     nat.rec_on    -- apply induction axiom
     n             -- arbitrary n
@@ -482,8 +535,12 @@ property, which is what we wanted to prove.
 
 /-
 -/
-example : ∀ (n : ℕ), sum_property n :=
+example : the_proposition  :=
 begin
+
+unfold the_proposition,
+
+
 -- let n be an arbitrary natural number
 assume n,
 
@@ -501,7 +558,7 @@ induction n with n' pf_n',
 },
 
 /-
-Now we have tp provide a proof for the inductive 
+Now we have to provide a proof for the inductive 
 case. The crucial thing to see here is that Lean
 has already *assumed* that n' is a nat and that
 you have a proof for n'. These are of course just
@@ -533,14 +590,18 @@ EXERCISE: Look at our definition of my_add. What
 it does is give you the axioms for addition! It
 says for any n, adding n and zero is n, and that
 adding n and (succ m) [the case where the second
-argument, m', is greater than 0, reduces to "one 
+argument, m', is greater than 0], reduces to "one 
 more than adding n and m'. Sum of n and m' here
-is assumed to be available, and in practice is 
-computed by a recursive call to my_add.
+is *assumed* to be available, and in practice is 
+computed by a recursive call to my_add. We can
+be assured that the recursion will terminate, as
+the value of the second argument goes down by 1
+on each recursive call, and will eventually (in 
+a finite number of steps) reach the based case.
 
 So now suppose you want to prove that for any
 n, my_add n 0 = n. This is super-easy because
-it's just an axiom *by our definition* of my_add.
+it's just an axiom by our definition of my_add.
 -/
 
 example : ∀ n, my_add n 0 = n :=
@@ -551,8 +612,9 @@ end
 
 /-
 On the other hand, we have no axiom that tells
-us that for any n, 0 + n = n. That, we will have
-to prove by induction. This is an exercise that 
+us that for any n, 0 + n = n (with 0 on the left
+instead of on the right). This fact we will have
+to prove---by induction. This is an exercise that 
 you will carry out by constructing the smaller
 proofs separately then combining them using the
 induction axiom for ℕ, and then by using the
@@ -566,7 +628,7 @@ for all natural numbers. This will be a predicate
 on a natural number, n. Call it left_zero_add.
 -/
 
-def left_zero_add (n) := 0 + n = n
+def left_zero_add (n) : Prop := 0 + n = n
 
 /-
 Now construct separate proofs that (a) 0 has
@@ -583,23 +645,81 @@ with a result already in the Lean library.
 -- base case
 theorem left_zero_add_zero : left_zero_add 0 :=
 begin
--- unfold the definition, then eq reflexivity 
+-- unfold the definition, rfl applied automatically 
 unfold left_zero_add,
 end
 
--- inductive case
+/- inductive case
+
+Assume that n' is arbitrary that that you're
+given a proof for n' (that 0 + n' = n'), then
+with these inputs construct a proof for n' + 1
+(that 0 + succ n' = succ n').
+-/
 theorem left_zero_add_n' : 
   ∀ n', 
     left_zero_add n' →
-    left_zero_add (succ n') :=
+    left_zero_add (n' + 1) :=
 begin
+-- expand definition
 unfold left_zero_add,
+-- assume given n' and proof for n',
 assume n' ind_hyp,
-rw<-ind_hyp,
-ring,
+/-
+Now construct proof for n' + 1
+
+First, use associativity of addition
+to rewrite 0 + (n' + 1) as (0 + n') + 1.
+Next use ih to rewrite this as n' + 1!
+That gives n' + 1 = n' + 1, which is easily
+proven the by reflexivity of equality, which 
+the rw tactic applies for us. 
+
+Here's what the add_assoc theorem from the
+Lean library proves:
+
+add_assoc : ∀ a b c, a + b + c = a + (b + c)
+
+Here we use this proven equality to rewrite the
+goal from right (in the equality) to left. We
+don't expect you to know the theorems proved in
+the libraries. But you should clearly understand
+how we're using this theorem in this proof.
+-/
+rw<-add_assoc,
+/-
+We've now finagled the goal into a form in
+which we can apply the induction hypothesis
+to rewrite it into a form we can finally prove.
+-/
+rw ind_hyp,
 end
 
--- The final proof
+/-
+If you want the proof of this ∀ theorem to 
+look even more like a function, move the 
+assumptions of n' and left_zero_add n' to
+the left of the colon. That's it!
+-/
+
+theorem left_zero_add_n'' 
+  (n' : ℕ) 
+  (ih : left_zero_add n' ) : 
+  left_zero_add (n' + 1) :=
+begin
+unfold left_zero_add at ih,
+unfold left_zero_add,
+rw<-add_assoc,
+rw ih,
+end
+
+
+/-
+Now that we've defined our base and step
+"machines" (lemmas), we assemble them into
+an overall proof by applying the induction
+axiom to them.
+-/
 theorem left_zero : ∀ n, 0 + n = n :=
 begin
 assume n,
