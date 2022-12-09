@@ -1,3 +1,6 @@
+-- albert zeng
+-- tcf5pw@virginia.edu
+
 /-
 The following line imports a tactic for
 simplfying algebraic expressions of a certain
@@ -336,7 +339,7 @@ begin
   assume h_exists a,
   let happy := P a,
   cases (classical.em happy) with yes no,
-  exact yes,
+  assumption,
   let contra := h_exists (exists.intro a no),
   contradiction,
 end
